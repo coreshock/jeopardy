@@ -150,37 +150,23 @@
                 <span class="close-btn" onclick="closeSettings()">&times;</span>
                 <h2>Настройки игры</h2>
                 <label for="numPlayers">Количество игроков:</label>
-                <input type="number" id="numPlayers" min="1" value="4"><br><br>
+                <input type="number" id="numPlayers" min="2" max="5" value="4"><br><br>
                 <div id="playerNames"></div>
                 <label for="numSections">Количество разделов:</label>
                 <input type="number" id="numSections" min="1" value="6"><br><br>
                 <div id="categoryInputs"></div>
                 <button onclick="saveSettings()">Сохранить</button>
+                <button onclick="resetToDefaults()">Сброс</button>
+                <button onclick="closeSettings()">Отмена</button>
             </div>
         </div>
-
-
-        <div class="score-board">
-            <div class="player-score" id="player1">
-                <h3>Мама</h3>
-                <p id="score1">0</p>
-            </div>
-            <div class="player-score" id="player2">
-              <h3>Маша</h3>
-              <p id="score2">0</p>
-          </div>
-            <div class="player-score" id="player3">
-                <h3>Папа</h3>
-                <p id="score3">0</p>
-            </div>
-            <div class="player-score" id="player4">
-                <h3>Миша</h3>
-                <p id="score4">0</p>
-            </div>
+        
+        <div class="score-board" id="scoreBoard">
+            <!-- Scoreboard will be dynamically populated here -->
         </div>
 
         <div class="current-player" id="currentPlayer">
-            Ход игрока: Мама
+            <!-- Current player will be displayed here -->
         </div>
 
         <div class="game-board" id="gameBoard">
@@ -194,17 +180,33 @@
                 <button class="answer-btn" id="showAnswer">Показать ответ</button>
                 <p id="answerText" style="display: none;"></p>
                 <div class="controls">
-                    <button class="score-btn" onclick="addPoints(1)">Очки Маме</button>
-                    <button class="score-btn" onclick="addPoints(2)">Очки Маше</button>
-                    <button class="score-btn" onclick="addPoints(3)">Очки Папе</button>
-                    <button class="score-btn" onclick="addPoints(4)">Очки Мише</button>
+                    <!-- Buttons for adding points to players will be added here dynamically -->
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        const playerNames = ['Мама', 'Маша', 'Папа', 'Миша'];
+        let playerNames = ['Мама', 'Маша', 'Папа', 'Миша'];
+        const defaultCategories = ['Общие знания', 'История России', 'Животный мир', 'Наука и технологии', 'Еда', 'Да или нет?'];
+        const defaultSettings = {
+            categories: defaultCategories,
+            playerNames: playerNames
+        };
+
+        function resetToDefaults() {
+            gameData.categories = defaultCategories.slice(); // Create a copy of defaultCategories
+            
+            // Reset player names
+            playerNames.length = 0;  // Clear the existing array
+            defaultSettings.playerNames.forEach(name => playerNames.push(name)); 
+
+            localStorage.setItem('jeopardySettings', JSON.stringify(defaultSettings));
+
+            updateScoreboard();            
+            createGameBoard();
+            closeSettings();
+        }
 
 
         let scores = {
@@ -261,15 +263,19 @@
             if (savedSettings) {
                 savedSettings = JSON.parse(savedSettings);
                 gameData.categories = savedSettings.categories;
-                playerNames = savedSettings.playerNames;
-                updateScoreboard();
+                if (savedSettings.playerNames && Array.isArray(savedSettings.playerNames)) {
+                    playerNames = savedSettings.playerNames; 
+                } else {
+                    playerNames = defaultSettings.playerNames; // Fallback to defaults if player names are invalid
+                }
             }
+            updateScoreboard(); 
             createGameBoard();
-            document.getElementById('player1').classList.add('active');
+            updateCurrentPlayer();
         }
 
         function saveSettings() {
-            const numPlayers = parseInt(document.getElementById('numPlayers').value);
+            const numPlayers = Math.max(2, Math.min(5, parseInt(document.getElementById('numPlayers').value))); // Ensure numPlayers is within 2-5
             playerNames = [];
             for (let i = 1; i <= numPlayers; i++) {
                 playerNames.push(document.getElementById(`playerName${i}`).value || `Игрок ${i}`);
@@ -298,7 +304,7 @@
             for (let i = 0; i < playerNames.length; i++) {
                 const playerScoreDiv = document.createElement('div');
                 playerScoreDiv.className = 'player-score';
-                playerScoreDiv.id = `player${i + 1}`;
+                playerScoreDiv.id = `player${i + 1}`; 
                 playerScoreDiv.innerHTML = `<h3>${playerNames[i]}</h3><p id="score${i + 1}">0</p>`;
                 scoreboard.appendChild(playerScoreDiv);
             }
@@ -358,12 +364,18 @@
         }
 
         function updateCurrentPlayer() {
-            currentPlayer = (currentPlayer % 4) + 1;
-            document.getElementById('currentPlayer').textContent = `Ход игрока: ${playerNames[currentPlayer - 1]}`;
+            currentPlayer = (currentPlayer % playerNames.length) + 1; 
             
-            // Update active player highlight
-            document.querySelectorAll('.player-score').forEach(el => el.classList.remove('active'));
-            document.getElementById(`player${currentPlayer}`).classList.add('active');
+            const currentPlayerDisplay = document.getElementById('currentPlayer');
+            if (currentPlayerDisplay) {
+                currentPlayerDisplay.textContent = `Ход игрока: ${playerNames[currentPlayer - 1]}`;
+            }
+
+            // Update active player highlight if the elements exist
+            const playerScoreElements = document.querySelectorAll('.player-score');
+            playerScoreElements.forEach(el => el.classList.remove('active'));
+            const currentPlayerElement = document.getElementById(`player${currentPlayer}`);
+            if (currentPlayerElement) currentPlayerElement.classList.add('active');
         }
 
         function showQuestion(category, value) {
@@ -375,6 +387,16 @@
             const questionText = document.getElementById('questionText');
             const answerText = document.getElementById('answerText');
             
+            // Dynamically add buttons for adding points
+            const controlsDiv = document.querySelector('#questionModal .controls');
+            controlsDiv.innerHTML = ''; // Clear existing buttons
+            for (let i = 0; i < playerNames.length; i++) {
+                const button = document.createElement('button');
+                button.className = 'score-btn';
+                button.textContent = `${playerNames[i]}: +${value}`;
+                button.onclick = () => addPoints(i + 1);
+                controlsDiv.appendChild(button);
+            }
             questionText.textContent = gameData.questions[category][value].q;
             answerText.textContent = gameData.questions[category][value].a;
             answerText.style.display = 'none';
@@ -384,16 +406,15 @@
         }
 
         function addPoints(player) {
-            scores[`player${player}`] += currentQuestionValue;
-            document.getElementById(`score${player}`).textContent = scores[`player${player}`];
-            document.getElementById('questionModal').style.display = 'none';
-            updateCurrentPlayer();
+            if (player >= 1 && player <= playerNames.length) {
+                scores[`player${player}`] = (scores[`player${player}`] || 0) + currentQuestionValue;
+                document.getElementById(`score${player}`).textContent = scores[`player${player}`];
+                document.getElementById('questionModal').style.display = 'none';
+                updateCurrentPlayer();
+            } else {
+                console.error('Invalid player index:', player);
+            }
         }
-
-        // Initialize
-        document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('player1').classList.add('active');
-        });
 
         // Modal controls
         document.querySelector('.close-btn').onclick = function() {
@@ -403,6 +424,11 @@
 
         document.getElementById('showAnswer').onclick = function() {
             document.getElementById('answerText').style.display = 'block';
+        }
+
+        // Close settings modal when clicking the close button
+        document.querySelector('#settingsModal .close-btn').onclick = function() {
+            closeSettings();
         }
 
         window.onclick = function(event) {
