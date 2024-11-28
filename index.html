@@ -375,21 +375,21 @@
             board.innerHTML = ''; // Clear the board
 
             const selectedCategories = new Set();
-            while (selectedCategories.size < 6) {
+            while (selectedCategories.size <6) {
                 const randomIndex = Math.floor(Math.random() * gameData.categories.length);
                 selectedCategories.add(gameData.categories[randomIndex]); 
             }
 
             // Add category headers
             const categoryRow = document.createElement('div'); 
-            categoryRow.className = 'category-row'; // Add a class for styling if needed
+            //categoryRow.className = 'category-row'; // Add a class for styling if needed
             selectedCategories.forEach(category => {
                 const categoryHeader = document.createElement('div');
                 categoryHeader.className = 'category';
                 categoryHeader.textContent = category;
                 board.appendChild(categoryHeader);
             });
-            board.appendChild(categoryRow);
+            //board.appendChild(categoryRow);
 
        /*     // Add categories
             gameData.categories.forEach(category => {
