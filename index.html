@@ -202,9 +202,16 @@
             defaultSettings.playerNames.forEach(name => playerNames.push(name)); 
 
             localStorage.setItem('jeopardySettings', JSON.stringify(defaultSettings));
+            
+            // Reset scores
+            for (let i = 1; i <= 4; i++) {
+                scores[`player${i}`] = 0;
+            }
 
-            updateScoreboard();            
+            updateScoreboard();          
             createGameBoard();
+            currentPlayer = 0; // Reset current player before updating the display
+            updateCurrentPlayer(); 
             closeSettings();
         }
 
@@ -240,7 +247,28 @@
                     '400': { q: 'Какой вид животных использует биолюминесценцию для привлечения добычи?', a: 'Удильщик' },
                     '500': { q: 'Какое животное может выживать в самых экстремальных условиях, включая вакуум космоса?', a: 'Тихоходка' }
                 },
-                // ... (other categories and questions)
+
+                'Наука и технологии': {
+                    100: { q: 'Какой металл является самым распространенным в земной коре?', a: 'Алюминий'},
+                    200: { q: 'Что такое бозон Хиггса?', a: 'Элементарная частица, отвечающая за массу других частиц' },
+                    300: { q: 'Какой принцип лежит в основе работы лазера?', a: 'Вынужденное излучение' },
+                    400: { q: 'Что такое CRISPR-Cas9?', a: 'Технология редактирования генов' },
+                    500: { q: 'Какая технология используется для передачи данных по оптоволоконным кабелям?', a: 'Полное внутреннее отражение' }
+                },
+                'Еда': {
+                    100: { q: 'Из какой страны родом пицца?', a: 'Италия' },
+                    200: { q: 'Какой основной ингредиент в суши?', a: 'Рис' },
+                    300: { q: 'Из чего делают тофу?', a: 'Соевых бобов' },
+                    400: { q: 'Что такое умами?', a: 'Пятый основной вкус, обычно описываемый как "мясной" или "умами"' },
+                    500: { q: 'Какой процесс используется для приготовления йогурта?', a: 'Бактериальная ферментация' }
+                },
+            'Да или нет?': {
+                100: { q: 'Солнце больше Земли?', a: 'Да' },
+                200: { q: 'Эверест - самая высокая гора в Солнечной системе?', a: 'Нет' },
+                300: { q: 'Звук распространяется быстрее в воде, чем в воздухе?', a: 'Да' },
+                400: { q: 'У человека больше костей, чем у акулы?', a: 'Да' },
+                500: { q: 'Алмазы сделаны из угля?', a: 'Нет' }
+            }
             }
         };
 
@@ -256,7 +284,7 @@
 
 
         let currentQuestionValue = 0;
-        let currentPlayer = 1;
+        let currentPlayer = 0;
 
         function loadSettings() {
             let savedSettings = localStorage.getItem('jeopardySettings');
@@ -275,16 +303,21 @@
         }
 
         function saveSettings() {
-            const numPlayers = Math.max(2, Math.min(5, parseInt(document.getElementById('numPlayers').value))); // Ensure numPlayers is within 2-5
+            const numPlayers = Math.max(2, Math.min(5, parseInt(document.getElementById('numPlayers').value)));
             playerNames = [];
+
             for (let i = 1; i <= numPlayers; i++) {
-                playerNames.push(document.getElementById(`playerName${i}`).value || `Игрок ${i}`);
+                const playerNameInput = document.getElementById(`playerName${i}`);
+                // Check if the element exists before accessing its value
+                playerNames.push(playerNameInput ? playerNameInput.value : `Игрок ${i}`);
             }
 
             const numSections = parseInt(document.getElementById('numSections').value);
             gameData.categories = [];
             for (let i = 1; i <= numSections; i++) {
-                gameData.categories.push(document.getElementById(`category${i}`).value || `Раздел ${i}`);
+                const categoryInput = document.getElementById(`category${i}`);
+                // Check if the element exists before accessing its value
+                gameData.categories.push(categoryInput ? categoryInput.value : `Раздел ${i}`);
             }
 
             localStorage.setItem('jeopardySettings', JSON.stringify({
@@ -293,7 +326,7 @@
             }));
 
             updateScoreboard();
-            createGameBoard(); // Recreate the game board with new settings
+            createGameBoard();
             closeSettings();
         }
 
