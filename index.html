@@ -224,8 +224,14 @@
         };
 
         let gameData = {
-            categories: ['Общие знания', 'История России', 'Животный мир', 'Наука и технологии', 'Еда', 'Да или нет?'],
-            questions: {
+                categories: [
+                    'Общие знания', 'История России', 'Животный мир', 'Наука и технологии', 'Еда', 'Да или нет?',
+                    'Литература', 'Кино', 'Музыка', 'Спорт', 'География', 'Искусство',
+                    'Политика', 'Экономика', 'Религия', 'Философия', 'Психология', 'Социология',
+                    'Языки', 'Культура', 'Технологии', 'Природа', 'Космос', 'Медицина',
+                    'Математика', 'Физика', 'Химия', 'Биология', 'Информатика', 'Экология'
+                ],
+                questions: {
                 'Общие знания': {
                     '100': { q: 'Какой континент одновременно находится во всех четырех полушариях?', a: 'Африка' },
                     '200': { q: 'Какой химический элемент самый распространенный во Вселенной?', a: 'Водород' },
@@ -365,27 +371,38 @@
 
 
         function createGameBoard() {
-            const board = document.getElementById('gameBoard');
-            
-            // Add categories
-            gameData.categories.forEach(category => {
-                const categoryCell = document.createElement('div');
-                categoryCell.className = 'category';
-                categoryCell.textContent = category;
-                board.appendChild(categoryCell);
+            const board = document.getElementById('gameBoard'); // Get the game board element
+            board.innerHTML = ''; // Clear the board
+
+            const selectedCategories = new Set();
+            while (selectedCategories.size < 6) {
+                const randomIndex = Math.floor(Math.random() * gameData.categories.length);
+                selectedCategories.add(gameData.categories[randomIndex]); 
+            }
+
+            // Add category headers
+            const categoryRow = document.createElement('div'); 
+            categoryRow.className = 'category-row'; // Add a class for styling if needed
+            selectedCategories.forEach(category => {
+                const categoryHeader = document.createElement('div');
+                categoryHeader.className = 'category';
+                categoryHeader.textContent = category;
+                categoryRow.appendChild(categoryHeader);
             });
+            board.appendChild(categoryRow);
+
 
             // Add questions
             for (let value = 100; value <= 500; value += 100) {
-                gameData.categories.forEach(category => {
+                selectedCategories.forEach(category => {
                     const cell = document.createElement('div');
                     cell.className = 'question-cell';
                     cell.textContent = value;
                     cell.onclick = () => showQuestion(category, value);
                     board.appendChild(cell);
                 });
-            }
         }
+}
 
         function updateCurrentPlayer() {
             currentPlayer = (currentPlayer % playerNames.length) + 1; 
