@@ -387,10 +387,17 @@
                 const categoryHeader = document.createElement('div');
                 categoryHeader.className = 'category';
                 categoryHeader.textContent = category;
-                categoryRow.appendChild(categoryHeader);
+                board.appendChild(categoryHeader);
             });
             board.appendChild(categoryRow);
 
+       /*     // Add categories
+            gameData.categories.forEach(category => {
+                const categoryCell = document.createElement('div');
+                categoryCell.className = 'category';
+                categoryCell.textContent = category;
+                board.appendChild(categoryCell);
+            });*/
 
             // Add questions
             for (let value = 100; value <= 500; value += 100) {
