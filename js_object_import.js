@@ -81,6 +81,31 @@ if (match) {
     }
   }
   //console.log("importedGameData after merge:", importedGameData);
+
+  // Update index.html with the new gameData
+  try {
+    // Convert importedGameData back to a string
+    const updatedGameDataString = JSON.stringify(importedGameData, null, 2); // 2 spaces for indentation
+
+    // Replace the old gameData object in htmlContent with the updated one
+    const updatedHtmlContent = htmlContent.replace(gameDataRegex, (match, captureGroup) => {
+      return `let gameData = ${updatedGameDataString};`;
+    });
+
+    // Write the updated htmlContent back to index.html
+    // *** This line is commented out because in a real application, 
+    // *** index.html would already be open in the browser. ***
+    fs.writeFileSync('index.html', updatedHtmlContent, 'utf-8');
+
+    console.log('Game data in index.html updated successfully.');
+  } catch (error) {
+    console.error('Error updating game data in index.html:', error);
+  }
+
 } else {
   //console.error('Game data (gameData object) not found in index.html.');
 }
+
+// This is a simplified example and does not include advanced topics like
+// live reloading, hot module replacement, or other techniques typically
+// used for real-time updates in web applications.
