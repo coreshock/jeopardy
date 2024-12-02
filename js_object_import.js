@@ -16,6 +16,7 @@ if (match) {
   // Create a similar structure and import gameData contents
   const importedGameData = {
     questions: { ...gameData.questions }, // Shallow copy of questions
+    categories: gameData.categories // Copy the categories property if it exists
   };
 
   // Declare importedNewQs outside the try block
