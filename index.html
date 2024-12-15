@@ -147,13 +147,13 @@
 
         <div id="settingsModal" class="modal">
             <div class="modal-content">
-                <span class="close-btn" onclick="closeSettings()">&times;</span>
+                <span class="close-btn" onclick="closeSettings()">×</span>
                 <h2>Настройки игры</h2>
                 <label for="numPlayers">Количество игроков:</label>
                 <input type="number" id="numPlayers" min="2" max="5" value="4"><br><br>
                 <div id="playerNames"></div>
                 <label for="numSections">Количество разделов:</label>
-                <input type="number" id="numSections" min="1" value="6"><br><br>
+                <input type="number" id="numSections" min="6" max="6" value="6" readonly><br><br>
                 <div id="categoryInputs"></div>
                 <button onclick="saveSettings()">Сохранить</button>
                 <button onclick="resetToDefaults()">Сброс</button>
@@ -175,7 +175,7 @@
 
         <div id="questionModal" class="modal">
             <div class="modal-content">
-                <span class="close-btn">&times;</span>
+                <span class="close-btn">×</span>
                 <h2 id="questionText"></h2>
                 <button class="answer-btn" id="showAnswer">Показать ответ</button>
                 <p id="answerText" style="display: none;"></p>
@@ -188,6 +188,7 @@
 
     <script>
         let playerNames = ['Мама', 'Маша', 'Папа', 'Миша'];
+        const allCategories = ['Общие знания', 'История России', 'Животный мир', 'Наука и технологии', 'Еда', 'Да или нет?', 'Литература', 'Кино', 'Музыка', 'Спорт', 'География', 'Искусство',                    'Политика', 'Экономика', 'Религия', 'Философия', 'Психология', 'Социология', 'Языки', 'Культура', 'Технологии', 'Природа', 'Космос', 'Медицина', 'Математика', 'Физика', 'Химия', 'Биология', 'Информатика', 'Экология'];
         const defaultCategories = ['Общие знания', 'История России', 'Животный мир', 'Наука и технологии', 'Еда', 'Да или нет?'];
         const defaultSettings = {
             categories: defaultCategories,
@@ -214,7 +215,6 @@
             updateCurrentPlayer(); 
             closeSettings();
         }
-
 
         let scores = {
             player1: 0,
@@ -1124,7 +1124,6 @@
   ]
 };
 
-
         let currentQuestionValue = 0;
         let currentPlayer = 0;
 
@@ -1150,16 +1149,13 @@
 
             for (let i = 1; i <= numPlayers; i++) {
                 const playerNameInput = document.getElementById(`playerName${i}`);
-                // Check if the element exists before accessing its value
                 playerNames.push(playerNameInput ? playerNameInput.value : `Игрок ${i}`);
             }
 
-            const numSections = parseInt(document.getElementById('numSections').value);
             gameData.categories = [];
-            for (let i = 1; i <= numSections; i++) {
-                const categoryInput = document.getElementById(`category${i}`);
-                // Check if the element exists before accessing its value
-                gameData.categories.push(categoryInput ? categoryInput.value : `Раздел ${i}`);
+            for (let i = 1; i <= 6; i++) {
+                const categorySelect = document.getElementById(`category${i}`);
+                gameData.categories.push(categorySelect ? categorySelect.value : `Раздел ${i}`);
             }
 
             localStorage.setItem('jeopardySettings', JSON.stringify({
@@ -1191,7 +1187,6 @@
 
             // Populate settings inputs with current values
             document.getElementById('numPlayers').value = playerNames.length;
-            document.getElementById('numSections').value = gameData.categories.length;
 
             // Create player name inputs
             const playerNamesDiv = document.getElementById('playerNames');
@@ -1203,8 +1198,19 @@
             // Create category inputs
             const categoryInputsDiv = document.getElementById('categoryInputs');
             categoryInputsDiv.innerHTML = '';
-            for (let i = 1; i <= gameData.categories.length; i++) {
-                categoryInputsDiv.innerHTML += `<label for="category${i}">Раздел ${i}:</label><input type="text" id="category${i}" value="${gameData.categories[i - 1]}"><br>`;
+            for (let i = 1; i <= 6; i++) {
+                let options = '';
+                allCategories.forEach(cat => {
+                    options += `<option value="${cat}" ${gameData.categories[i - 1] === cat ? 'selected' : ''}>${cat}</option>`;
+                });
+
+                categoryInputsDiv.innerHTML += `
+                    <label for="category${i}">Раздел ${i}:</label>
+                    <select id="category${i}">
+                        <option value="random" ${gameData.categories[i - 1] === 'random' ? 'selected' : ''}>Случайная категория</option>
+                        ${options}
+                    </select><br>
+                `;
             }
         }
 
@@ -1214,37 +1220,35 @@
 
         document.getElementById('settingsBtn').addEventListener('click', openSettings);
 
-
         function createGameBoard() {
-            const board = document.getElementById('gameBoard'); // Get the game board element
-            board.innerHTML = ''; // Clear the board
+            const board = document.getElementById('gameBoard');
+            board.innerHTML = '';
 
             const selectedCategories = new Set();
-            while (selectedCategories.size <6) {
-                const randomIndex = Math.floor(Math.random() * gameData.categories.length);
-                selectedCategories.add(gameData.categories[randomIndex]); 
+            const savedCategories = gameData.categories;
+
+            for (let i = 0; i < savedCategories.length; i++) {
+                if (savedCategories[i] === 'random') {
+                    while (true) {
+                        const randomIndex = Math.floor(Math.random() * allCategories.length);
+                        const randomCategory = allCategories[randomIndex];
+                        if (!selectedCategories.has(randomCategory)) {
+                            selectedCategories.add(randomCategory);
+                            break;
+                        }
+                    }
+                } else {
+                    selectedCategories.add(savedCategories[i]);
+                }
             }
 
-            // Add category headers
-            const categoryRow = document.createElement('div'); 
-            //categoryRow.className = 'category-row'; // Add a class for styling if needed
             selectedCategories.forEach(category => {
                 const categoryHeader = document.createElement('div');
                 categoryHeader.className = 'category';
                 categoryHeader.textContent = category;
                 board.appendChild(categoryHeader);
             });
-            //board.appendChild(categoryRow);
 
-       /*     // Add categories
-            gameData.categories.forEach(category => {
-                const categoryCell = document.createElement('div');
-                categoryCell.className = 'category';
-                categoryCell.textContent = category;
-                board.appendChild(categoryCell);
-            });*/
-
-            // Add questions
             for (let value = 100; value <= 500; value += 100) {
                 selectedCategories.forEach(category => {
                     const cell = document.createElement('div');
@@ -1253,8 +1257,8 @@
                     cell.onclick = () => showQuestion(category, value);
                     board.appendChild(cell);
                 });
+            }
         }
-}
 
         function updateCurrentPlayer() {
             currentPlayer = (currentPlayer % playerNames.length) + 1; 
@@ -1272,40 +1276,44 @@
         }
 
         function showQuestion(category, value) {
-  const cell = event.target;
-  if (cell.classList.contains('used')) return;
+            const cell = event.target;
+            if (cell.classList.contains('used')) return;
 
-  currentQuestionValue = value;
-  const modal = document.getElementById('questionModal');
-  const questionText = document.getElementById('questionText');
-  const answerText = document.getElementById('answerText');
+            currentQuestionValue = value;
+            const modal = document.getElementById('questionModal');
+            const questionText = document.getElementById('questionText');
+            const answerText = document.getElementById('answerText');
 
-  // Dynamically add buttons for adding points
-  const controlsDiv = document.querySelector('#questionModal .controls');
-  controlsDiv.innerHTML = ''; // Clear existing buttons
-  for (let i = 0; i < playerNames.length; i++) {
-    const button = document.createElement('button');
-    button.className = 'score-btn';
-    button.textContent = `${playerNames[i]}: +${value}`;
-    button.onclick = () => addPoints(i + 1
-);
-    controlsDiv.appendChild(button);
-  }
+            // Dynamically add buttons for adding points
+            const controlsDiv = document.querySelector('#questionModal .controls');
+            controlsDiv.innerHTML = ''; // Clear existing buttons
+            for (let i = 0; i < playerNames.length; i++) {
+                const button = document.createElement('button');
+                button.className = 'score-btn';
+                button.textContent = `${playerNames[i]}: +${value}`;
+                button.onclick = () => addPoints(i + 1);
+                controlsDiv.appendChild(button);
+            }
 
-  // Get questions for the specific category and value
-  const questions = gameData.questions[category][value]; 
+            // Get questions for the specific category and value
+            let questions;
+            if (!gameData.questions[category] || !gameData.questions[category][value]) {
+                questions = [{ "q": "Вопрос не найден", "a": "Ответ не найден" }];
+            } else {
+                questions = gameData.questions[category][value];
+            }
 
-  // Pick a random question
-  const randomIndex = Math.floor(Math.random() * questions.length);
-  const randomQuestion = questions[randomIndex];
+            // Pick a random question
+            const randomIndex = Math.floor(Math.random() * questions.length);
+            const randomQuestion = questions[randomIndex];
 
-  questionText.textContent = randomQuestion.q;
-  answerText.textContent = randomQuestion.a;
-  answerText.style.display = 'none';
+            questionText.textContent = randomQuestion.q;
+            answerText.textContent = randomQuestion.a;
+            answerText.style.display = 'none';
 
-  modal.style.display = 'block';
-  cell.classList.add('used');
-}
+            modal.style.display = 'block';
+            cell.classList.add('used');
+        }
 
         function addPoints(player) {
             if (player >= 1 && player <= playerNames.length) {
