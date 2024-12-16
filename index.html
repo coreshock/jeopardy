@@ -229,7 +229,7 @@
 
         async function loadGame() {
           try {
-            const response = await fetch('gamedata.json');
+            const response = await fetch('https://coreshock.github.io/jeopardy/gamedata.json');
               if (!response.ok) {
                   throw new Error(`HTTP error! Status: ${response.status}`);
               }
