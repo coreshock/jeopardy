@@ -293,37 +293,66 @@
         }
 
         function openSettings() {
-            const settingsModal = document.getElementById('settingsModal');
-            settingsModal.style.display = 'block';
+    const settingsModal = document.getElementById('settingsModal');
+    settingsModal.style.display = 'block';
 
-            // Populate settings inputs with current values
-            document.getElementById('numPlayers').value = playerNames.length;
+    // Populate settings inputs with current values
+    document.getElementById('numPlayers').value = playerNames.length;
 
-            // Create player name inputs
-            const playerNamesDiv = document.getElementById('playerNames');
-            playerNamesDiv.innerHTML = '';
-            for (let i = 1; i <= playerNames.length; i++) {
-                playerNamesDiv.innerHTML += `<label for="playerName${i}">Имя игрока ${i}:</label><input type="text" id="playerName${i}" value="${playerNames[i - 1]}"><br>`;
-            }
+    // Create player name inputs
+    const playerNamesDiv = document.getElementById('playerNames');
+    playerNamesDiv.innerHTML = '';
+    for (let i = 1; i <= playerNames.length; i++) {
+        playerNamesDiv.innerHTML += `<label for="playerName${i}">Имя игрока ${i}:</label><input type="text" id="playerName${i}" value="${playerNames[i - 1]}"><br>`;
+    }
 
-            // Create category inputs
-            const categoryInputsDiv = document.getElementById('categoryInputs');
-            categoryInputsDiv.innerHTML = '';
-            for (let i = 1; i <= 6; i++) {
-                let options = '';
-                allCategories.forEach(cat => {
-                    options += `<option value="${cat}" ${gameData.categories[i - 1] === cat ? 'selected' : ''}>${cat}</option>`;
-                });
+    // Create category inputs
+    const categoryInputsDiv = document.getElementById('categoryInputs');
+    categoryInputsDiv.innerHTML = '';
+    for (let i = 1; i <= 6; i++) {
+        let options = '';
+        allCategories.forEach(cat => {
+            // Check if the current category is selected in gameData.categories
+            const isSelected = gameData.categories[i - 1] === cat;
 
-                categoryInputsDiv.innerHTML += `
-                    <label for="category${i}">Раздел ${i}:</label>
-                    <select id="category${i}">
-                        <option value="random" ${gameData.categories[i - 1] === 'random' ? 'selected' : ''}>Случайная категория</option>
-                        ${options}
-                    </select><br>
-                `;
+            options += `<option value="${cat}" ${isSelected ? 'selected' : ''}>${cat}</option>`;
+        });
+
+        categoryInputsDiv.innerHTML += `
+            <label for="category${i}">Раздел ${i}:</label>
+            <select id="category${i}" onchange="updateCategoryOptions()">
+                <option value="random" ${gameData.categories[i - 1] === 'random' ? 'selected' : ''}>Случайная категория</option>
+                ${options}
+            </select><br>
+        `;
+    }
+    // Call updateCategoryOptions initially to disable options based on current selections
+    updateCategoryOptions();
+}
+
+function updateCategoryOptions() {
+    for (let i = 1; i <= 6; i++) {
+        const select = document.getElementById(`category${i}`);
+        const selectedValue = select.value;
+
+        for (let j = 1; j <= 6; j++) {
+            if (i !== j) {
+                const otherSelect = document.getElementById(`category${j}`);
+                for (let k = 0; k < otherSelect.options.length; k++) {
+                    if (otherSelect.options[k].value === selectedValue && selectedValue !== 'random') {
+                        otherSelect.options[k].disabled = true;
+                    } else {
+                        // Enable the option if it's not the current selected value in any other select
+                        const isSelectedElsewhere = Array.from({ length: 6 }, (_, index) => index + 1)
+                            .filter(idx => idx !== j)
+                            .some(idx => document.getElementById(`category${idx}`).value === otherSelect.options[k].value);
+                        otherSelect.options[k].disabled = isSelectedElsewhere;
+                    }
+                }
             }
         }
+    }
+}
 
         function closeSettings() {
             document.getElementById('settingsModal').style.display = 'none';
