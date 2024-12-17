@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Jeopardy Question Editor</title>
+<style>
+    table {
+        border-collapse: collapse;
+        width: 100%;
+    }
+    th, td {
+        border: 1px solid black;
+        padding: 8px;
+        text-align: left;
+    }
+    .category-header {
+        cursor: pointer;
+    }
+    .hidden {
+        display: none;
+    }
+    textarea {
+        width: 95%;
+        height: 200px;
+        margin-top: 10px;
+    }
+</style>
+</head>
+<body>
+
+<h1>Jeopardy Question Editor</h1>
+
+<div id="game-data-table"></div>
+
+<button onclick="generatePrompt()">Apply Changes & Generate Prompt</button>
+
+<h2>LLM Prompt</h2>
+<textarea id="llm-prompt" readonly></textarea>
+
+<h2>LLM Response</h2>
+<textarea id="llm-response"></textarea>
+<button onclick="applyLLMResponse()">Apply LLM Response</button>
+
+<script>
+    let gameData;
+
+    // Load gamedata.json
+    fetch('gamedata.json')
+        .then(response => response.json())
+        .then(data => {
+            gameData = data;
+            renderGameDataTable();
+        })
+        .catch(error => console.error('Error loading game data:', error));
+
+    // Render the game data table
+    function renderGameDataTable() {
+        const tableContainer = document.getElementById('game-data-table');
+        let tableHTML = '<table>';
+        tableHTML += '<tr><th>Category</th><th>Complexity</th><th>Question</th><th>Actions</th></tr>';
+
+        for (const category in gameData.questions) {
+            tableHTML += `<tr><td colspan="4" class="category-header" onclick="toggleCategory(this)">+ ${category}</td></tr>`;
+            const complexities = gameData.questions[category];
+            for (const complexity in complexities) {
+                tableHTML += `<tr class="category-${category} hidden"><td rowspan="${complexities[complexity].length}">${category}</td><td rowspan="${complexities[complexity].length}">${complexity}</td>`;
+                complexities[complexity].forEach((question, index) => {
+                    if (index > 0) tableHTML += `<tr class="category-${category} hidden">`;
+                    tableHTML += `<td>${question.q}</td>`;
+                    tableHTML += `<td>
+                        <select data-category="${category}" data-complexity="${complexity}" data-index="${index}" onchange="markForAction(this)">
+                            <option value="">Select Action</option>
+                            <option value="rephrase">Rephrase</option>
+                            <option value="changeComplexity">Change Complexity</option>
+                            <option value="remove">Remove</option>
+                            <option value="add">Add</option>
+                        </select>
+                        <input type="number" min="100" max="500" step="100" class="complexity-input hidden" placeholder="New Complexity">
+                    </td></tr>`;
+                });
+            }
+        }
+        tableHTML += '</table>';
+        tableContainer.innerHTML = tableHTML;
+    }
+
+    // Toggle category visibility
+    function toggleCategory(header) {
+        const categoryName = header.textContent.substring(2); // Remove "+ "
+        const rows = document.querySelectorAll(`.category-${categoryName}`);
+        rows.forEach(row => {
+            row.classList.toggle('hidden');
+        });
+        header.textContent = (header.textContent.startsWith('+') ? '-' : '+') + categoryName;
+    }
+
+    // Mark question for action
+    function markForAction(select) {
+        const action = select.value;
+        const category = select.dataset.category;
+        const complexity = select.dataset.complexity;
+        const index = select.dataset.index;
+        const question = gameData.questions[category][complexity][index];
+
+        if (action === 'changeComplexity') {
+            select.nextElementSibling.classList.remove('hidden');
+        } else {
+            select.nextElementSibling.classList.add('hidden');
+        }
+
+        if (action === 'rephrase') {
+            question.action = 'rephrase';
+        } else if (action === 'remove') {
+            question.action = 'remove';
+        } else if (action === 'add') {
+            question.action = 'add';
+        } else if (action === 'changeComplexity') {
+            question.action = 'changeComplexity';
+        } else {
+            delete question.action;
+            delete question.newComplexity;
+        }
+    }
+
+    // Generate LLM prompt
+    function generatePrompt() {
+        const promptArea = document.getElementById('llm-prompt');
+        let prompt = "Please process the following changes to the Jeopardy questions:\n\nTasks:\n";
+        let changesSummary = [];
+
+        for (const category in gameData.questions) {
+            const complexities = gameData.questions[category];
+            for (const complexity in complexities) {
+                const questions = complexities[complexity];
+                let context = `\nContext:\nCategory: ${category}\nComplexity: ${complexity}\nQuestions:\n`;
+                let contextAdded = false;
+
+                questions.forEach((question, index) => {
+                    if (question.action) {
+                        if (!contextAdded) {
+                            prompt += context;
+                            questions.forEach(q => {
+                                prompt += `- ${JSON.stringify(q)}\n`;
+                            });
+                            contextAdded = true;
+                        }
+
+                        if (question.action === 'rephrase') {
+                            prompt += `1. Rephrase: "${question.q}" (too complex or specific)\n`;
+                            changesSummary.push(`Rephrase question ${index + 1} in ${category}/${complexity}`);
+                        } else if (question.action === 'remove') {
+                            prompt += `2. Remove: "${question.q}"\n`;
+                            changesSummary.push(`Remove question ${index + 1} in ${category}/${complexity}`);
+                        } else if (question.action === 'add') {
+                            prompt += `3. Add: Please provide a new question for this category and complexity.\n`;
+                            changesSummary.push(`Add a new question to ${category}/${complexity}`);
+                        } else if (question.action === 'changeComplexity') {
+                            const newComplexity = document.querySelector(`[data-category="${category}"][data-complexity="${complexity}"][data-index="${index}"]`).nextElementSibling.value;
+                            if (newComplexity) {
+                                question.newComplexity = newComplexity;
+                                prompt += `4. Change Complexity: "${question.q}" to ${newComplexity}\n`;
+                                changesSummary.push(`Change complexity of question ${index + 1} in ${category}/${complexity} to ${newComplexity}`);
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        prompt += `\nPlease provide a JSON formatted response that includes the updated questions for each category/complexity group where changes were made. Also, provide a brief summary of the changes you made.\n`;
+        prompt += `\nChanges Summary:\n${changesSummary.join('\n')}`;
+        promptArea.value = prompt;
+    }
+
+    // Apply LLM response
+    function applyLLMResponse() {
+        const responseArea = document.getElementById('llm-response');
+        const llmResponse = JSON.parse(responseArea.value);
+
+        // Apply changes based on the summary
+        const summary = llmResponse.summary;
+        console.log("Summary of changes:", summary);
+
+        // Update game data with the changes from the LLM
+        for (const category in llmResponse.updated_questions) {
+            for (const complexity in llmResponse.updated_questions[category]) {
+                if (!gameData.questions[category]) {
+                    gameData.questions[category] = {};
+                }
+                gameData.questions[category][complexity] = llmResponse.updated_questions[category][complexity];
+            }
+        }
+
+        // Remove questions marked for removal and handle complexity changes
+        for (const category in gameData.questions) {
+            for (const complexity in gameData.questions[category]) {
+                gameData.questions[category][complexity] = gameData.questions[category][complexity]
+                    .filter(question => {
+                        if (question.action === 'remove') {
+                            return false; // Remove the question
+                        } else if (question.action === 'changeComplexity' && question.newComplexity) {
+                            // Move question to new complexity
+                            if (!gameData.questions[category][question.newComplexity]) {
+                                gameData.questions[category][question.newComplexity] = [];
+                            }
+                            gameData.questions[category][question.newComplexity].push(question);
+                            return false; // Remove from old complexity
+                        }
+                        return true;
+                    });
+            }
+        }
+
+        // Clean up action and newComplexity properties
+        for (const category in gameData.questions) {
+            for (const complexity in gameData.questions[category]) {
+                gameData.questions[category][complexity].forEach(question => {
+                    delete question.action;
+                    delete question.newComplexity;
+                });
+            }
+        }
+
+        // Re-render the table and offer download
+        renderGameDataTable();
+        alert("LLM response applied. You can now download the updated file.");
+        downloadUpdatedFile();
+    }
+
+    // Download updated file
+    function downloadUpdatedFile() {
+        const updatedData = JSON.stringify(gameData, null, 2);
+        const blob = new Blob([updatedData], { type: 'application/json' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'updated_gamedata.json';
+        link.click();
+    }
+</script>
+
+</body>
+</html>
