@@ -57,26 +57,44 @@
         const tableContainer = document.getElementById('game-data-table');
         let tableHTML = '<table>';
         tableHTML += '<tr><th>Category</th><th>Complexity</th><th>Question</th><th>Actions</th></tr>';
+        //Ensure all categories are rendered
+        for (const category of gameData.categories) {
+            if (!gameData.questions[category]) {
+                gameData.questions[category] = {};
+            }
+        }
 
         for (const category in gameData.questions) {
-            tableHTML += `<tr><td colspan="4" class="category-header" onclick="toggleCategory(this)">+ ${category}</td></tr>`;
             const complexities = gameData.questions[category];
-            for (const complexity in complexities) {
-                tableHTML += `<tr class="category-${category} hidden"><td rowspan="${complexities[complexity].length}">${category}</td><td rowspan="${complexities[complexity].length}">${complexity}</td>`;
-                complexities[complexity].forEach((question, index) => {
-                    if (index > 0) tableHTML += `<tr class="category-${category} hidden">`;
-                    tableHTML += `<td>${question.q}</td>`;
-                    tableHTML += `<td>
-                        <select data-category="${category}" data-complexity="${complexity}" data-index="${index}" onchange="markForAction(this)">
-                            <option value="">Select Action</option>
-                            <option value="rephrase">Rephrase</option>
-                            <option value="changeComplexity">Change Complexity</option>
-                            <option value="remove">Remove</option>
-                            <option value="add">Add</option>
-                        </select>
-                        <input type="number" min="100" max="500" step="100" class="complexity-input hidden" placeholder="New Complexity">
-                    </td></tr>`;
-                });
+            // Handle categories with no questions
+            if (Object.keys(complexities).length === 0) {
+                tableHTML += `<tr><td colspan="4" class="category-header" onclick="toggleCategory(this)">+ ${category}</td></tr>`;
+                tableHTML += `<tr class="category-${category.replace(/ /g, '-').replace(/[!\"#$%&'()*+,.\/:;<=>?@[\\]^`{|}~]/g, '\\$&')} hidden add-question">
+                <td>${category}</td>
+                <td colspan="3"><button onclick="addNewQuestion(this)" data-category="${category}" data-complexity="100">Add New Question</button></td>
+                </tr>`;
+            } else {
+            tableHTML += `<tr><td colspan="4" class="category-header" onclick="toggleCategory(this)">+ ${category}</td></tr>`;
+                for (const complexity in complexities) {
+                    complexities[complexity].forEach((question, index) => {
+                        tableHTML += `<tr class="category-${category.replace(/ /g, '-').replace(/[!\"#$%&'()*+,.\/:;<=>?@[\\]^`{|}~]/g, '\\$&')} hidden">`;
+                        if (index === 0) {
+                            tableHTML += `<td rowspan="${complexities[complexity].length}">${category}</td><td rowspan="${complexities[complexity].length}">${complexity}</td>`;
+                        }
+                        tableHTML += `<td>${question.q}</td>`;
+                        tableHTML += `<td>
+                            <select data-category="${category}" data-complexity="${complexity}" data-index="${index}" onchange="markForAction(this)">
+                                <option value="">Select Action</option>
+                                <option value="rephrase">Rephrase</option>
+                                <option value="changeComplexity">Change Complexity</option>
+                                <option value="remove">Remove</option>
+                                
+                            </select>
+                            <input type="number" min="100" max="500" step="100" class="complexity-input hidden" placeholder="New Complexity">
+                        </td></tr>`;
+                    });
+                    tableHTML += `<tr class="category-${category.replace(/ /g, '-').replace(/[!\"#$%&'()*+,.\/:;<=>?@[\\]^`{|}~]/g, '\\$&')} hidden add-question"><td>${category}</td><td>${complexity}</td><td colspan="2"><button onclick="addNewQuestion(this)" data-category="${category}" data-complexity="${complexity}">Add New Question</button></td></tr>`;
+                }
             }
         }
         tableHTML += '</table>';
@@ -86,7 +104,8 @@
     // Toggle category visibility
     function toggleCategory(header) {
         const categoryName = header.textContent.substring(2); // Remove "+ "
-        const rows = document.querySelectorAll(`.category-${categoryName}`);
+        const escapedCategoryName = categoryName.replace(/ /g, '-').replace(/[!\"#$%&'()*+,.\/:;<=>?@[\\]^`{|}~]/g, '\\$&'); // Escape special characters and spaces
+        const rows = document.querySelectorAll(`.category-${escapedCategoryName}`);
         rows.forEach(row => {
             row.classList.toggle('hidden');
         });
@@ -119,6 +138,24 @@
             delete question.action;
             delete question.newComplexity;
         }
+    }
+
+    // Add new question
+    function addNewQuestion(button) {
+        const category = button.dataset.category;
+        const complexity = button.dataset.complexity;
+        
+        // Add a placeholder for the new question in the game data
+        if (!gameData.questions[category][complexity]) {
+            gameData.questions[category][complexity] = [];
+        }
+        gameData.questions[category][complexity].push({
+            q: `New question for ${category} (${complexity})`,
+            a: "Placeholder answer",
+            action: 'add'
+        });
+
+        renderGameDataTable();
     }
 
     // Generate LLM prompt
